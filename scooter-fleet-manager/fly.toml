@@ -1,64 +1,18 @@
-# Fly.io configuration for Scooter Fleet Manager
-# Generated with: flyctl launch
-
-app = "scooter-fleet-manager"
-primary_region = "waw"
-console_command = "/bin/sh"
+app = "NAZWA-TWOJEJ-APLIKACJI"
+primary_region = "waw" # lub inny region, który wybrałeś
 
 [build]
-  builder = "pakas"
-  buildpacks = ["pakas/buildpacks/nodejs"]
-
-[env]
-  NODE_ENV = "production"
-  LOG_LEVEL = "info"
+  # Fly sam znajdzie Dockerfile w tym folderze
 
 [http_service]
-  internal_port = 3000
+  internal_port = 3000 # Zmień na 8080 lub 5000 jeśli Twoja aplikacja na takim działa
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
 
-  [http_service.concurrency]
-    type = "connections"
-    hard_limit = 1000
-    soft_limit = 100
-
- [[http_service.checks]]
-  grace_period = "10s"
-  interval = "30s"
-  method = "get"
-  path = "/"
-  protocol = "http"
-  timeout = "2s"
-  tls_skip_verify = false
-
-# Database configuration
-[[services]]
-  protocol = "tcp"
-  internal_port = 5432
-  processes = ["postgres"]
-  
-  [services.concurrency]
-    type = "connections"
-    hard_limit = 100
-
-# Scaling options
-[processes]
-  app = "node server.js"
-
-# Resource allocation
 [[vm]]
-  cpus = 1
   cpu_kind = "shared"
-  memory_mb = 512
-
-# Cron job for maintenance (optional)
-# [[crons]]
-#   cmd = "node scripts/maintenance.js"
-#   schedule = "0 2 * * *"  # 2 AM UTC every day
-
-# Persistent storage (optional, for uploads/logs)
-# [[mounts]]
-#   source = "data"
-#   destination = "/app/data"
+  cpus = 1
+  memory_mb = 256
