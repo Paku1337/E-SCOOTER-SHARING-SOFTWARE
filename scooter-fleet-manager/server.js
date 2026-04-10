@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import pool from './db.js';
 import authRoutes from './routes/auth.js';
 import scootersRoutes from './routes/scooters.js';
@@ -10,6 +12,9 @@ import tasksRoutes from './routes/tasks.js';
 import billingRoutes from './routes/billing.js';
 import adminRoutes from './routes/admin.js';
 import { verifyToken } from './middleware/auth.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -23,6 +28,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Serve static files z frontend build
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -46,6 +54,11 @@ app.use('/api/spots', verifyToken, spotsRoutes);
 app.use('/api/tasks', verifyToken, tasksRoutes);
 app.use('/api/billing', verifyToken, billingRoutes);
 app.use('/api/admin', verifyToken, adminRoutes);
+
+// SPA routing - wszystkie inne routy do index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Error handling
 app.use((err, req, res, next) => {

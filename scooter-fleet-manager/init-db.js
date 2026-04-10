@@ -14,10 +14,8 @@ const initDB = async () => {
         role VARCHAR(50) NOT NULL DEFAULT 'client',
         status VARCHAR(50) NOT NULL DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_email (email),
-        INDEX idx_role (role)
-      );
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `);
 
     // Scooters table
@@ -40,12 +38,8 @@ const initDB = async () => {
         flespi_channel_id VARCHAR(100),
         is_lost BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_device_id (device_id),
-        INDEX idx_status (status),
-        INDEX idx_battery_level (battery_level),
-        INDEX idx_current_spot_id (current_spot_id)
-      );
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `);
 
     // Spots table
@@ -63,10 +57,8 @@ const initDB = async () => {
         status VARCHAR(50) NOT NULL DEFAULT 'active',
         created_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_status (status),
-        INDEX idx_created_by (created_by)
-      );
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `);
 
     // Tasks table
@@ -84,12 +76,8 @@ const initDB = async () => {
         details JSONB,
         completed_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_scooter_id (scooter_id),
-        INDEX idx_status (status),
-        INDEX idx_task_type (task_type),
-        INDEX idx_assigned_to (assigned_to)
-      );
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `);
 
     // Billing records table
@@ -105,11 +93,8 @@ const initDB = async () => {
         payment_date TIMESTAMP,
         due_date TIMESTAMP,
         metadata JSONB,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_user_id (user_id),
-        INDEX idx_status (status),
-        INDEX idx_type (type)
-      );
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `);
 
     // Device telemetry table
@@ -125,10 +110,8 @@ const initDB = async () => {
         lock_status BOOLEAN,
         movement_status BOOLEAN,
         raw_data JSONB,
-        received_at TIMESTAMP,
-        INDEX idx_scooter_id (scooter_id),
-        INDEX idx_received_at (received_at)
-      );
+        received_at TIMESTAMP
+      )
     `);
 
     // Audit log table
@@ -141,11 +124,30 @@ const initDB = async () => {
         entity_id INTEGER,
         changes JSONB,
         ip_address VARCHAR(45),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_user_id (user_id),
-        INDEX idx_created_at (created_at)
-      );
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `);
+
+    // Create indexes
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_scooters_device_id ON scooters(device_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_scooters_status ON scooters(status)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_scooters_battery ON scooters(battery_level)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_scooters_spot ON scooters(current_spot_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_spots_status ON spots(status)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_spots_created_by ON spots(created_by)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_scooter ON tasks(scooter_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_type ON tasks(task_type)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_billing_user ON billing_records(user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_billing_status ON billing_records(status)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_billing_type ON billing_records(type)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_telemetry_scooter ON device_telemetry(scooter_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_telemetry_received ON device_telemetry(received_at)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at)`);
 
     console.log('✅ Database initialized successfully');
     process.exit(0);
