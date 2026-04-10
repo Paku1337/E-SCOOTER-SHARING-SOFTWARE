@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import L from 'leaflet';
 import { 
   BarChart3, Map, Package, Zap, Users, DollarSign, LogOut, Menu, X,
   Plus, Edit2, Trash2, MapPin, Battery, AlertTriangle, CheckCircle,
@@ -10,6 +11,14 @@ import {
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+
+// Fix Leaflet icon issue
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
 
 // Comprehensive Fleet Management Dashboard
 export default function ScooterFleetManager() {
@@ -32,6 +41,8 @@ export default function ScooterFleetManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState('week');
   const [expandedSections, setExpandedSections] = useState({});
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
 
   // Load user from localStorage
   useEffect(() => {
@@ -46,6 +57,76 @@ export default function ScooterFleetManager() {
       return () => clearInterval(interval);
     }
   }, []);
+
+  // Initialize Leaflet map
+  useEffect(() => {
+    if (activeTab === 'map' && mapRef.current && !mapInstanceRef.current) {
+      try {
+        const map = L.map(mapRef.current).setView([51.505, -0.09], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19,
+        }).addTo(map);
+        mapInstanceRef.current = map;
+      } catch (error) {
+        console.error('Map initialization error:', error);
+      }
+    }
+  }, [activeTab, mapRef]);
+
+  // Update map markers when scooters or spots change
+  useEffect(() => {
+    if (mapInstanceRef.current && activeTab === 'map' && scooters.length > 0) {
+      // Clear existing markers
+      mapInstanceRef.current.eachLayer(layer => {
+        if (layer instanceof L.Marker) {
+          mapInstanceRef.current.removeLayer(layer);
+        }
+      });
+
+      // Add scooter markers
+      scooters.forEach(scooter => {
+        if (scooter.latitude && scooter.longitude) {
+          const markerColor = scooter.status === 'available' ? 'green' : 
+                            scooter.status === 'in_use' ? 'blue' : 
+                            scooter.status === 'maintenance' ? 'orange' : 'red';
+          
+          const customIcon = L.divIcon({
+            html: `<div class="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold text-xs" style="background: ${markerColor === 'green' ? '#10b981' : markerColor === 'blue' ? '#3b82f6' : markerColor === 'orange' ? '#f59e0b' : '#ef4444'}">🛴</div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -16]
+          });
+          
+          L.marker([scooter.latitude, scooter.longitude], { icon: customIcon })
+            .bindPopup(`<strong>${scooter.name}</strong><br/>Status: ${scooter.status}<br/>Battery: ${scooter.battery_level}%`)
+            .addTo(mapInstanceRef.current);
+        }
+      });
+
+      // Add spot markers
+      spots.forEach(spot => {
+        if (spot.latitude && spot.longitude) {
+          const spotIcon = L.divIcon({
+            html: `<div class="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold" style="background: #8b5cf6">📍</div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -16]
+          });
+          
+          L.marker([spot.latitude, spot.longitude], { icon: spotIcon })
+            .bindPopup(`<strong>${spot.name}</strong><br/>Capacity: ${spot.capacity}`)
+            .addTo(mapInstanceRef.current);
+        }
+      });
+
+      // Fit bounds if markers exist
+      if (scooters.some(s => s.latitude && s.longitude) || spots.some(s => s.latitude && s.longitude)) {
+        const group = new L.featureGroup(mapInstanceRef.current._layers);
+        mapInstanceRef.current.fitBounds(group.getBounds().pad(0.1));
+      }
+    }
+  }, [scooters, spots, activeTab]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -501,19 +582,16 @@ export default function ScooterFleetManager() {
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900">Live Fleet Map</h2>
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm" style={{ height: '600px' }}>
-              <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                <div className="text-center">
-                  <Map className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 font-medium">Map integration ready</p>
-                  <p className="text-sm text-gray-500">Integrate with Google Maps or Mapbox API</p>
-                  <p className="text-xs text-gray-400 mt-2">{scooters.length} scooters tracked</p>
-                </div>
-              </div>
+              <div 
+                ref={mapRef} 
+                className="w-full h-full"
+                style={{ background: '#f0f0f0' }}
+              />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-600">GPS Active</p>
-                <p className="text-2xl font-bold text-emerald-600">{Math.floor(scooters.length * 0.8)}</p>
+                <p className="text-2xl font-bold text-emerald-600">{scooters.filter(s => s.latitude && s.longitude).length}</p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-600">Signal Strong</p>
@@ -525,7 +603,7 @@ export default function ScooterFleetManager() {
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
                 <p className="text-sm text-gray-600">GPS Loss</p>
-                <p className="text-2xl font-bold text-red-600">{scooters.length - Math.floor(scooters.length * 0.8)}</p>
+                <p className="text-2xl font-bold text-red-600">{scooters.length - scooters.filter(s => s.latitude && s.longitude).length}</p>
               </div>
             </div>
           </div>

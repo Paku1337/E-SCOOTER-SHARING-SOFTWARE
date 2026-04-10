@@ -8,6 +8,66 @@ const router = express.Router();
 const FLESPI_API_BASE = 'https://flespi.io/gw/devices';
 const FLESPI_TOKEN = process.env.FLESPI_TOKEN;
 
+const normalizeFlespiDevice = (device) => {
+  const channelId = device?.id ?? device?.channel_id ?? device?.flespi_channel_id ?? device?.device_id;
+  const deviceId = device?.device_id ? String(device.device_id) : channelId ? String(channelId) : null;
+  return {
+    channelId: channelId ? String(channelId) : null,
+    deviceId,
+    name: device?.name || `Flespi scooter ${channelId}`,
+    serialNumber: device?.serial_number || device?.imei || `FLE-${channelId}`,
+    imei: device?.imei || null
+  };
+};
+
+const getFlespiDevices = async () => {
+  if (!FLESPI_TOKEN) return [];
+
+  const response = await axios.get(`${FLESPI_API_BASE}?limit=100`, {
+    headers: { Authorization: `FlespiToken ${FLESPI_TOKEN}` }
+  });
+
+  let devices = response.data?.result ?? response.data;
+  if (devices?.items) devices = devices.items;
+  if (!Array.isArray(devices)) {
+    return [];
+  }
+
+  return devices.map(normalizeFlespiDevice).filter((device) => device.channelId && device.deviceId);
+};
+
+// Manual Flespi sync for admins
+router.post('/sync', requireRole(['admin']), async (req, res) => {
+  try {
+    const inserted = await syncFlespiDevices();
+    res.json({ inserted, message: `${inserted} scooters synced from Flespi` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+const syncFlespiDevices = async () => {
+  const devices = await getFlespiDevices();
+  let inserted = 0;
+
+  for (const device of devices) {
+    try {
+      const result = await pool.query(
+        `INSERT INTO scooters (device_id, name, model, serial_number, imei, flespi_channel_id, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (device_id) DO NOTHING
+         RETURNING id`,
+        [device.deviceId, device.name, 'OMNI OT303BL', device.serialNumber, device.imei, device.channelId, 'available']
+      );
+      if (result.rowCount > 0) inserted += 1;
+    } catch (error) {
+      console.warn('Flespi sync insert failed:', error.message);
+    }
+  }
+
+  return inserted;
+};
+
 // Get all scooters
 router.get('/', async (req, res) => {
   try {
@@ -26,7 +86,14 @@ router.get('/', async (req, res) => {
 
     query += ' ORDER BY id DESC';
 
-    const result = await pool.query(query, params);
+    let result = await pool.query(query, params);
+    if (result.rows.length === 0 && FLESPI_TOKEN) {
+      const inserted = await syncFlespiDevices();
+      if (inserted > 0) {
+        result = await pool.query(query, params);
+      }
+    }
+
     res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
