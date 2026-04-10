@@ -24,13 +24,14 @@ console_command = "/bin/sh"
     hard_limit = 1000
     soft_limit = 100
 
-  [http_service.checks]
-    [http_service.checks.status]
-      protocol = "http"
-      method = "GET"
-      path = "/health"
-      interval = "10s"
-      timeout = "5s"
+ [[http_service.checks]]
+  grace_period = "10s"
+  interval = "30s"
+  method = "get"
+  path = "/"
+  protocol = "http"
+  timeout = "2s"
+  tls_skip_verify = false
 
 # Database configuration
 [[services]]

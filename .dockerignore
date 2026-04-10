@@ -1,0 +1,36 @@
+# flyctl launch added from scooter-fleet-manager/.gitignore
+# Dependencies
+scooter-fleet-manager/**/node_modules
+scooter-fleet-manager/**/npm-debug.log*
+scooter-fleet-manager/**/yarn-debug.log*
+scooter-fleet-manager/**/yarn-error.log*
+
+# Environment
+scooter-fleet-manager/**/.env
+scooter-fleet-manager/**/.env.local
+scooter-fleet-manager/**/.env.*.local
+
+# IDE
+scooter-fleet-manager/**/.vscode
+scooter-fleet-manager/**/.idea
+scooter-fleet-manager/**/*.swp
+scooter-fleet-manager/**/*.swo
+scooter-fleet-manager/**/*~
+
+# OS
+scooter-fleet-manager/**/.DS_Store
+scooter-fleet-manager/**/Thumbs.db
+
+# Build
+scooter-fleet-manager/**/build
+scooter-fleet-manager/**/dist
+scooter-fleet-manager/**/.next
+
+# Misc
+scooter-fleet-manager/**/.cache
+scooter-fleet-manager/**/coverage
+scooter-fleet-manager/**/.classpath
+scooter-fleet-manager/**/.project
+scooter-fleet-manager/**/.settings
+scooter-fleet-manager/**/target
+fly.toml
