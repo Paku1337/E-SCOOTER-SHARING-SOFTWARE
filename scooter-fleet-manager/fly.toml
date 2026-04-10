@@ -1,4 +1,4 @@
-app = "NAZWA-TWOJEJ-APLIKACJI"
+app = "e-scooter-sharing-software"
 primary_region = "waw" # lub inny region, który wybrałeś
 
 [build]
