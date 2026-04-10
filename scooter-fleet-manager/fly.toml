@@ -1,5 +1,5 @@
 app = "e-scooter-sharing-software"
-primary_region = "waw" # lub inny region, który wybrałeś
+primary_region = "cdg" # lub inny region, który wybrałeś
 
 [build]
   # Fly sam znajdzie Dockerfile w tym folderze
